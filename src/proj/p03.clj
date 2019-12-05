@@ -51,7 +51,7 @@
         w1_blocks (covered-blocks w1)
         w2_blocks (covered-blocks w2)
         intersections (intersection w1_blocks w2_blocks)
-        p1 (reduce #(min-key manhatten %1 %2) intersections)
+        ;p1 (reduce #(min-key manhatten %1 %2) intersections)
         dist-along-wire (fn [p w]
                           (loop [curr [0 0]
                                  path w
@@ -75,3 +75,5 @@
                               (dist-along-wire p w2))
                            p]) intersections))]
     p2))
+
+(def )
