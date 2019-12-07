@@ -1,14 +1,8 @@
 (ns proj.p07
   (:require [clojure.string :refer [split trim-newline]]
-            [proj.comp :refer [run]]
+            [proj.comp :refer [run read-prog]]
             [clojure.math.combinatorics :refer [cartesian-product permutations]]
             [clojure.core.async :refer [>!! <!! >! <! poll! go go-loop chan close! sliding-buffer]]))
-
-(defn read-prog [fl]
-  (->> (split (slurp fl) #",")
-       (map trim-newline)
-       (filter not-empty)
-       (mapv read-string)))
 
 (def prog (read-prog "p07.txt"))
 

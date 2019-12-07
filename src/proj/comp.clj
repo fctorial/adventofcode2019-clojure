@@ -1,5 +1,6 @@
 (ns proj.comp
-  (:require [clojure.core.async :refer [>! <! go chan close!]]))
+  (:require [clojure.string :refer [split trim-newline]]
+            [clojure.core.async :refer [>! <! go chan close!]]))
 
 
 (def ac {1 3
@@ -11,6 +12,12 @@
          7 3
          8 3
          99 0})
+
+(defn read-prog [fl]
+  (->> (split (slurp fl) #",")
+       (map trim-newline)
+       (filter not-empty)
+       (mapv read-string)))
 
 (defn run [prog input id]
   (let [output (chan)]
