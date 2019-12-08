@@ -3,14 +3,14 @@
             [clojure.core.async :refer [>! <! go chan close!]]))
 
 
-(def ac {1 3
-         2 3
-         3 1
-         4 1
-         5 2
-         6 2
-         7 3
-         8 3
+(def ac {1  3
+         2  3
+         3  1
+         4  1
+         5  2
+         6  2
+         7  3
+         8  3
          99 0})
 
 (defn read-prog [fl]
