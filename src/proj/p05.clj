@@ -6,15 +6,13 @@
 (def prog (read-prog "p05.txt"))
 
 (defn diagnose [sys]
-  (let [ip (chan 1)]
+  (let [ip (chan 1)
+        op (chan 1)]
     (go (>! ip sys))
-    (let [op (run prog ip "")]
-     (go-loop []
-       (let [o (<! op)]
-         (if o
-           (do
-             (println o)
-             (recur))))))))
+    (run prog ip op "")
+    (go-loop []
+      (println (<! op))
+      (recur))))
 
 (defn p1 []
   (diagnose 1))
