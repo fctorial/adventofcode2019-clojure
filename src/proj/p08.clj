@@ -1,20 +1,20 @@
 (ns proj.p08
   (:require [clojure.string :refer [split trim-newline]]))
 
-(def nm {\0  0
-          \1 1
-          \2 2
-          \3 3
-          \4 4
-          \5 5
-          \6 6
-          \7 7
-          \8 8
-          \9 9})
+(def nm {\0 0
+         \1 1
+         \2 2
+         \3 3
+         \4 4
+         \5 5
+         \6 6
+         \7 7
+         \8 8
+         \9 9})
 
 (def layers (->> (slurp "p08.txt")
-                 (filter #(not= % \newline))
                  (map nm)
+                 (filter identity)
                  (partition (* 25 6))))
 
 (defn count-of [pred coll]
@@ -34,8 +34,8 @@
                          (apply interleave layers))
         final-layered (->> final
                            (map (fn [p]
-                              (or (first (drop-while #(= % 2) p))
-                                  2)))
+                                  (or (first (drop-while #(= % 2) p))
+                                      2)))
                            (map {0 "  " 1 "##"}))
         printed (->> final-layered
                      (partition 25)

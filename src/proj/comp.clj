@@ -11,63 +11,74 @@
          6  2
          7  3
          8  3
+         9  1
          99 0})
 
 (defn read-prog [fl]
   (->> (split (slurp fl) #",")
        (map trim-newline)
        (filter not-empty)
-       (mapv read-string)))
+       (mapv bigint)))
 
 (defn run [prog input output id]
   (go
     (loop [mem prog
-           ip 0]
-      (let [op_full (mem ip)
+           meta {:ip   0
+                 :base 0}]
+      (let [ip (meta :ip)
+            op_full (mem ip)
             op (mod op_full 100)
             ac (ac op)
             modes (take ac (concat
                              (reverse (str (unchecked-divide-int op_full 100)))
                              (repeat \0)))
             nxt_ip (+ ip ac 1)
+            nxt_meta (assoc meta :ip nxt_ip)
             args_raw (subvec mem (inc ip) nxt_ip)
-            args (mapv
-                   (fn [a m]
-                     (if (= m \0)
-                       (mem a)
-                       a))
-                   args_raw modes)]
-        #_(println id op_full args_raw)
+            args_based (mapv
+                         (fn [a m]
+                           (if (= m \2)
+                             (+ a (meta :base))
+                             a))
+                         args_raw modes)
+            args_ref (mapv
+                       (fn [a m]
+                         (if (= m \1)
+                           a (mem a)))
+                       args_based modes)]
+        ;(println id op_full args_raw meta (mem 1000))
         (case op
           1 (recur
-              (assoc mem (args_raw 2) (+ (args 0) (args 1)))
-              nxt_ip)
+              (assoc mem (args_based 2) (+ (args_ref 0) (args_ref 1)))
+              nxt_meta)
           2 (recur
-              (assoc mem (args_raw 2) (* (args 0) (args 1)))
-              nxt_ip)
+              (assoc mem (args_based 2) (* (args_ref 0) (args_ref 1)))
+              nxt_meta)
           3 (recur
-              (assoc mem (args_raw 0) (<! input))
-              nxt_ip)
+              (assoc mem (args_based 0) (<! input))
+              nxt_meta)
           4 (do
-              (>! output (args 0))
+              (>! output (args_ref 0))
               (recur mem
-                     nxt_ip))
+                     nxt_meta))
           5 (recur mem
-                   (if (zero? (args 0))
-                     nxt_ip
-                     (args 1)))
+                   (if (zero? (args_ref 0))
+                     nxt_meta
+                     (assoc nxt_meta :ip (args_ref 1))))
           6 (recur mem
-                   (if (zero? (args 0))
-                     (args 1)
-                     nxt_ip))
+                   (if (zero? (args_ref 0))
+                     (assoc nxt_meta :ip (args_ref 1))
+                     nxt_meta))
           7 (recur
-              (assoc mem (args_raw 2)
-                         (if (< (args 0) (args 1))
+              (assoc mem (args_based 2)
+                         (if (< (args_ref 0) (args_ref 1))
                            1 0))
-              nxt_ip)
+              nxt_meta)
           8 (recur
-              (assoc mem (args_raw 2)
-                         (if (= (args 0) (args 1))
+              (assoc mem (args_based 2)
+                         (if (= (args_ref 0) (args_ref 1))
                            1 0))
-              nxt_ip)
+              nxt_meta)
+          9 (recur mem
+                   (update nxt_meta :base #(+ % (args_ref 0))))
           99 mem)))))

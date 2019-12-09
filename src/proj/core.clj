@@ -1,6 +1,11 @@
 (ns proj.core)
 
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
+(defn zip-colls [& cs]
+  (partition (count cs)
+             (apply interleave cs)))
+
+(defn iter-n [coll n]
+  (apply zip-colls
+         (map
+           #(drop % coll)
+           (range n))))
