@@ -1,5 +1,5 @@
 (ns proj.p08
-  (:require [clojure.string :refer [split trim-newline]]))
+  (:require [clojure.string :refer [split trim-newline join]]))
 
 (def nm {\0 0
          \1 1
@@ -39,5 +39,6 @@
                            (map {0 "  " 1 "##"}))
         printed (->> final-layered
                      (partition 25)
-                     (map #(apply str %)))]
+                     (map #(apply str %))
+                     (join "\n"))]
     printed))

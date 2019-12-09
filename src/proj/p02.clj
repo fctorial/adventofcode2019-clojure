@@ -10,7 +10,13 @@
 (defn patch-ip [n v]
   (assoc prog 1 n 2 v))
 
-(defn s []
+(defn p1 []
+  (-> (patch-ip 12 2)
+      (run nil nil "")
+      <!!
+      first))
+
+(defn p2 []
   (first
     (filter (fn [[noun verb]]
               (let [fixed_prog (patch-ip noun verb)

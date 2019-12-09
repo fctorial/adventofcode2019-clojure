@@ -75,5 +75,3 @@
                               (dist-along-wire p w2))
                            p]) intersections))]
     p2))
-
-(def )

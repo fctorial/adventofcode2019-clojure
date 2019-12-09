@@ -9,7 +9,7 @@
       res
       0)))
 
-(defn s []
+(defn p1 []
   (let [ip (map
              read-string
              (filter #(not (empty? %))
@@ -39,7 +39,7 @@
         total (+ module_req fuel_req)]
     total))
 
-(defn s2 []
+(defn p2 []
   (let [ip (map
              read-string
              (filter #(not (empty? %))
