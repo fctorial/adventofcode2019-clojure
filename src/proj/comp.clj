@@ -20,6 +20,10 @@
        (filter not-empty)
        (mapv bigint)))
 
+(defn pln [& args]
+  #_(locking System/out
+    (apply println args)))
+
 (defn run [prog input output id]
   (go
     (loop [mem prog
@@ -46,7 +50,7 @@
                          (if (= m \1)
                            a (mem a)))
                        args_based modes)]
-        ;(println id op_full args_raw meta (mem 1000))
+        (pln id op_full args_raw meta)
         (case op
           1 (recur
               (assoc mem (args_based 2) (+ (args_ref 0) (args_ref 1)))
