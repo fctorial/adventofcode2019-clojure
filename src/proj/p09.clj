@@ -1,14 +1,6 @@
 (ns proj.p09
-  (:require [proj.comp :refer [run read-prog]]
+  (:require [proj.comp :refer [run read-prog extend-prog]]
             [clojure.core.async :refer [>! >!! <! <!! chan go go-loop]]))
-
-(def big0 (bigint 0))
-
-(defn extend-prog [prog by]
-  (reduce
-    (fn [p _] (conj p big0))
-    prog
-    (range by)))
 
 (def prog (-> "p09.txt"
               read-prog

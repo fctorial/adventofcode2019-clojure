@@ -1,7 +1,7 @@
 (ns proj.p07
   (:require [clojure.string :refer [split trim-newline]]
             [proj.comp :refer [run read-prog]]
-            [proj.core :refer [iter-n]]
+            [proj.utils :refer [iter-n]]
             [clojure.math.combinatorics :refer [cartesian-product permutations]]
             [clojure.core.async :as async :refer [>!! <!! >! <! poll! go go-loop chan close! sliding-buffer]]))
 

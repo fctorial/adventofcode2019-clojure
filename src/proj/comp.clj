@@ -20,6 +20,13 @@
        (filter not-empty)
        (mapv bigint)))
 
+(def big0 (bigint 0))
+(defn extend-prog [prog by]
+  (reduce
+    (fn [p _] (conj p big0))
+    prog
+    (range by)))
+
 (defn pln [& args]
   #_(locking System/out
     (apply println args)))
