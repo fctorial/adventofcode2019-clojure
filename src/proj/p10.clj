@@ -16,38 +16,17 @@
                  [x y])))
 
 (def N (count asts))
-
-(defn len [[x y]]
-  (Math/sqrt (+ (* x x)
-                (* y y))))
-
-(defn round [f]
-  (Math/round
-    (* f 10000000)))
-
 (defn calc-angs []
-  (mapv (fn [i]
-          (mapv (fn [j]
-                  (if (not= i j)
-                    (let [ai (asts i)
-                          aj (asts j)
-                          del (mapv -
-                                    aj ai)
-                          dot-up (apply + (mapv *
-                                                del [-1 0]))
-                          del-len (len del)
-                          ang (round (Math/acos (/ dot-up del-len)))
-                          pi (round 3.1415926535)]
-                      (if (neg? (second del))
-                        (- (* 2 pi)
-                           ang)
-                        ang))))
-                (range N)))
-        (range N)))
+  (mapv (fn [ai]
+          (mapv (fn [aj]
+                  (if (not= ai aj)
+                    (let [del (map - aj ai)]
+                      (* -1 (Math/atan2 (second del) (first del))))))
+                asts))
+        asts))
 
 (defn _p1 [angs]
-  (->> (range N)
-       (map angs)
+  (->> angs
        (map frequencies)
        (map count)
        (map dec)
@@ -63,7 +42,7 @@
                            (sorted-set-by cmp k))))
           (sorted-map) coll))
 
-(defn dist [i j]
+(defn dist2 [i j]
   (let [li (asts i)
         lj (asts j)]
     (->> (map - lj li)
@@ -75,8 +54,8 @@
         view (collect
                (map vector (range N) (angs laser))
                (fn [i j]
-                 (< (dist i laser)
-                    (dist j laser))))]
+                 (< (dist2 i laser)
+                    (dist2 j laser))))]
     (loop [left 200
            last nil
            curr 0
@@ -92,6 +71,7 @@
             (recur (dec left)
                    (first targeted)
                    next
-                   (update view curr rest))))))))
+                   (update view curr rest))))))
+    ))
 (defn p2 []
   (_p2 (calc-angs)))

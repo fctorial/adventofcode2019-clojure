@@ -1,5 +1,6 @@
 (ns proj.p11
   (:require [proj.comp :refer [read-prog extend-prog run pln]]
+            [proj.utils :refer [minimax]]
             [clojure.core.async :refer [<! >! <!! >!! go-loop go close! chan merge]]))
 
 (def prog (extend-prog (read-prog "p11.txt") 1000))
@@ -39,19 +40,7 @@
           painted)))))
 
 (defn p1 []
-  (robot {}))
-
-(defn rand-range [n]
-  (map
-    (fn [_] (rand-int 100))
-    (range n)))
-
-(defn minimax [nums]
-  (reduce
-    (fn [[mx mn] num]
-      [(max mx num) (min mn num)])
-    [Double/NEGATIVE_INFINITY Double/POSITIVE_INFINITY]
-    nums))
+  (count (robot {})))
 
 (defn p2 []
   (let [panelMap (robot {[0 0] 1})
@@ -63,13 +52,8 @@
                          keys
                          (map second)
                          minimax)]
-    (mapv
-      (fn [y]
-        (mapv
-          (fn [x]
-            (print (charmap (or (panelMap [x y])
-                                0))))
-          (range minX (inc maxX)))
-        (println))
-      (range minY (inc maxY)))
-    nil))
+    (doseq [y (range minY (inc maxY))]
+      (doseq [x (range minX (inc maxX))]
+        (print (charmap (or (panelMap [x y])
+                            0))))
+      (println))))

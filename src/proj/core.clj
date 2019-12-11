@@ -17,7 +17,7 @@
                 day)
         namespace (symbol (str "proj." fl))]
     (require namespace)
-    (print "part 1:")
+    (println "part 1:")
     (println (time ((ns-resolve namespace (symbol "p1")))))
-    (print "part 2:")
+    (println "part 2:")
     (println (time ((ns-resolve namespace (symbol "p2")))))))
