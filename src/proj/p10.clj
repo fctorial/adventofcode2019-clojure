@@ -61,7 +61,7 @@
            curr 0
            view (vec (map second (dissoc view nil)))]
       (if (zero? left)
-        last
+        (asts last)
         (let [targeted (view curr)
               next (inc curr)
               next (if (= (count view) next)
@@ -71,7 +71,6 @@
             (recur (dec left)
                    (first targeted)
                    next
-                   (update view curr rest))))))
-    ))
+                   (update view curr rest))))))))
 (defn p2 []
   (_p2 (calc-angs)))
