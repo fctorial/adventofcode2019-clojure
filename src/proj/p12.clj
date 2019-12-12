@@ -63,11 +63,10 @@
                new-vels
                new-poss)))))
 
-(defn linear-period [vels poss]
+(defn linear-period [ovels oposs]
   (loop [t 0
-         vels vels
-         poss poss
-         states (transient #{[vels poss]})]
+         vels ovels
+         poss oposs]
     (let [new-vels (map
                      (fn [vc pc]
                        (reduce
@@ -80,14 +79,13 @@
                      vels poss)
           new-poss (map
                      +
-                     poss new-vels)
-          new-state [new-vels new-poss]]
-      (if (contains? states new-state)
+                     poss new-vels)]
+      (if (and (= new-vels ovels)
+               (= new-poss oposs))
         (inc t)
         (recur (inc t)
                new-vels
-               new-poss
-               (conj! states new-state))))))
+               new-poss)))))
 
 (defn p2 []
   (apply lcm (for [i (range 3)]
