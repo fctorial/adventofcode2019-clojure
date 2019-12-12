@@ -1,5 +1,5 @@
 (ns proj.utils
-  (:require [clojure.core.async :refer [<! >! go-loop chan merge]]))
+  (:require [clojure.core.async :as async :refer [<! >! go-loop chan]]))
 
 (defn zip-colls [& cs]
   (partition (count cs)
@@ -32,44 +32,52 @@
         (recur)))))
 
 (defn >- [ips op]
-  (let [ip (merge ips)]
+  (let [ip (async/merge ips)]
     (go-loop []
       (let [val (<! ip)]
         (when val
           (>! op val)
           (recur))))))
 
-(deftype vecview [v s e]
-  clojure.lang.IPersistentVector
-  (length [_]
-    (- e s))
-  (assocN [_ i val]
-    (throw (new UnsupportedOperationException)))
-  (cons [_ val]
-    (throw (new UnsupportedOperationException)))
-  (rseq [_]
-    (throw (new UnsupportedOperationException)))
-  (peek [_]
-    (throw (new UnsupportedOperationException)))
-  (pop [_]
-    (throw (new UnsupportedOperationException)))
-  (assoc [_ k v]
-    (throw (new UnsupportedOperationException)))
-  (nth [_ i]
-    (if (and (>= i s)
-             (< i e))
-      (v (+ s i))
-      (throw (new IndexOutOfBoundsException))))
-  (nth [_ i nf]
-    (if (and (>= i s)
-             (< i e))
-      (v (+ s i))
-      nf))
-  (containsKey [_ k]
-    (and (< k e)
-         (>= k s)))
-  (entryAt [this k]
-    [k (nth this k)])
-  clojure.lang.IFn
-  (invoke [this a]
-    (nth this a)))
+(defn primes-below [n]
+  (let [lim (Math/sqrt n)]
+    (loop [curr 3
+           seive (transient (vec (concat [false false true]
+                                         (take (- n 2) (cycle [true false])))))]
+      (let [nxt (+ 2 curr)]
+        (if (> curr lim)
+          (filter
+            #(seive %)
+            (range (inc n)))
+          (if (seive curr)
+            (recur nxt
+                   (reduce
+                     #(assoc! %1 (* %2 curr) false)
+                     seive
+                     (range 2 (/ (inc n) curr))))
+            (recur nxt
+                   seive)))))))
+
+(def factorize
+  (memoize
+    (fn [n primes]
+      (if (< n 2)
+        {}
+        (let [pr (first
+                   (drop-while #(not= 0 (mod n %)) primes))
+              [pr_pow left] (loop [pr_pow 0
+                                   curr n]
+                              (if (not= 0 (mod curr pr))
+                                [pr_pow curr]
+                                (recur (inc pr_pow) (/ curr pr))))]
+          (assoc (factorize left primes) pr pr_pow))))))
+
+(defn lcm [& nums]
+  (let [prs (primes-below (apply max nums))
+        fs (map #(factorize % prs) nums)
+        lcm (reduce #(merge-with max %1 %2) fs)]
+    (apply *
+           (map
+             (fn [[p c]]
+               (apply * (repeat c p)))
+             lcm))))
