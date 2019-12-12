@@ -38,3 +38,38 @@
         (when val
           (>! op val)
           (recur))))))
+
+(deftype vecview [v s e]
+  clojure.lang.IPersistentVector
+  (length [_]
+    (- e s))
+  (assocN [_ i val]
+    (throw (new UnsupportedOperationException)))
+  (cons [_ val]
+    (throw (new UnsupportedOperationException)))
+  (rseq [_]
+    (throw (new UnsupportedOperationException)))
+  (peek [_]
+    (throw (new UnsupportedOperationException)))
+  (pop [_]
+    (throw (new UnsupportedOperationException)))
+  (assoc [_ k v]
+    (throw (new UnsupportedOperationException)))
+  (nth [_ i]
+    (if (and (>= i s)
+             (< i e))
+      (v (+ s i))
+      (throw (new IndexOutOfBoundsException))))
+  (nth [_ i nf]
+    (if (and (>= i s)
+             (< i e))
+      (v (+ s i))
+      nf))
+  (containsKey [_ k]
+    (and (< k e)
+         (>= k s)))
+  (entryAt [this k]
+    [k (nth this k)])
+  clojure.lang.IFn
+  (invoke [this a]
+    (nth this a)))

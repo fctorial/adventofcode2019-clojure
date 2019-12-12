@@ -1,15 +1,5 @@
 (ns proj.core)
 
-(defn zip-colls [& cs]
-  (partition (count cs)
-             (apply interleave cs)))
-
-(defn iter-n [coll n]
-  (apply zip-colls
-         (map
-           #(drop % coll)
-           (range n))))
-
 (defn -main [day]
   (let [fl (str "p"
                 (if (= 1 (count day))
