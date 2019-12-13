@@ -89,8 +89,8 @@
 
 (defn p2 []
   (apply lcm (for [i (range 3)]
-     (let [vis [0 0 0 0]
-           pis (map
-                 (fn [p] (p i))
-                 ip)]
-       (linear-period vis pis)))))
+               (let [vis [0 0 0 0]
+                     pis (map
+                           (fn [p] (p i))
+                           ip)]
+                 (linear-period vis pis)))))

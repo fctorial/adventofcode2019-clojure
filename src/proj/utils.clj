@@ -1,5 +1,6 @@
 (ns proj.utils
-  (:require [clojure.core.async :as async :refer [<! >! go-loop chan]]))
+  (:require [clojure.core.async :as async :refer [<! >! go-loop chan]]
+            [clojure.set :refer :all]))
 
 (defn zip-colls [& cs]
   (partition (count cs)
@@ -81,3 +82,22 @@
              (fn [[p c]]
                (apply * (repeat c p)))
              lcm))))
+
+(defn hcf [& nums]
+  (let [prs (primes-below (apply max nums))
+        fs (map #(factorize % prs) nums)
+        common (apply intersection (->> fs
+                                        (map keys)
+                                        (map set)))
+        hcf (select-keys
+              (reduce #(merge-with min %1 %2) fs)
+              common)]
+    (apply *
+           (map
+             (fn [[p c]]
+               (apply * (repeat c p)))
+             hcf))))
+
+(defn lmap [f & colls]
+  (fn [i]
+    (apply f (map #(% i) colls))))

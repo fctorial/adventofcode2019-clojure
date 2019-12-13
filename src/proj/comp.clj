@@ -28,7 +28,7 @@
     (range by)))
 
 (defn pln [& args]
-  #_(locking System/out
+  (locking System/out
     (apply println args)))
 
 (defn run [prog input output id]
@@ -57,7 +57,7 @@
                          (if (= m \1)
                            a (mem a)))
                        args_based modes)]
-        (pln id op_full args_raw meta)
+        #_(pln id op_full args_raw meta)
         (case op
           1 (recur
               (assoc mem (args_based 2) (+ (args_ref 0) (args_ref 1)))
