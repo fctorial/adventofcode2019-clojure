@@ -40,34 +40,34 @@
                "FUEL" '()))
 
 (def depth (loop [res {}
-                   left (conj clojure.lang.PersistentQueue/EMPTY ["FUEL" 0])]
+                  left (conj clojure.lang.PersistentQueue/EMPTY ["FUEL" 0])]
+             (if (empty? left)
+               res
+               (let [[p d] (first left)
+                     cs (children p)]
+                 (recur
+                   (assoc res p d)
+                   (reduce
+                     (fn [left c]
+                       (conj left [c (inc d)]))
+                     (pop left) cs))))))
+
+(def height (loop [res {}
+                   left (conj clojure.lang.PersistentQueue/EMPTY ["ORE" 0])]
               (if (empty? left)
                 res
                 (let [[p d] (first left)
-                      cs (children p)]
+                      cs (parents p)]
                   (recur
-                    (assoc res p d)
+                    (if (contains? res p)
+                      res
+                      (assoc res p d))
                     (reduce
                       (fn [left c]
                         (conj left [c (inc d)]))
                       (pop left) cs))))))
 
-(def height (loop [res {}
-                    left (conj clojure.lang.PersistentQueue/EMPTY ["ORE" 0])]
-               (if (empty? left)
-                 res
-                 (let [[p d] (first left)
-                       cs (parents p)]
-                   (recur
-                     (if (contains? res p)
-                       res
-                       (assoc res p d))
-                     (reduce
-                       (fn [left c]
-                         (conj left [c (inc d)]))
-                       (pop left) cs))))))
-
-(defn p1 []
+(defn _p1 [f]
   (loop [req (sorted-map-by (fn [a b]
                               (let [dc (compare (depth a)
                                                 (depth b))]
@@ -77,15 +77,13 @@
                                                     (height a))]
                                     (if (not= hc 0)
                                       hc
-                                      (compare a b)))))) "FUEL" 1)]
-    (println req)
+                                      (compare a b)))))) "FUEL" f)]
     (if (= "ORE"
            (first (first req)))
       req
       (let [[unit amount] (first req)
             rxn (rs unit)
-            rxn_reps (unchecked-divide-int amount
-                                           (rxn :amount))
+            rxn_reps (quot amount (rxn :amount))
             rxn_reps (if (zero? (mod amount
                                      (rxn :amount)))
                        rxn_reps
@@ -104,9 +102,18 @@
         (recur nxt_reqs)))))
 
 (defn p1 []
-  (let [askers (map
-                 (fn [k] [k (chan)])
-                 (keys parents))]))
+  (_p1 1))
+
+(defn binary-search [s e pred]
+  (cond
+    (pred e) e
+    (and (= (inc s) e)
+         (pred s)) s
+    :else (let [mid (unchecked-divide-int (+ s e) 2)]
+            (if (pred mid)
+              (recur mid e pred)
+              (recur s mid pred)))))
 
 (defn p2 []
-  )
+  (binary-search 1 10000000 (fn [v] (< ((_p1 v) "ORE")
+                                    1000000000000))))
