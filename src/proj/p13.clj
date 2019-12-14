@@ -53,7 +53,6 @@
         cpu (run (assoc prog 0 2) ip op "cpu")
         gpu (gpu op "gpu")]
     (go-loop []
-      (Thread/sleep 10)
       (>! ip 0)
       (recur))
     (<!! cpu)
