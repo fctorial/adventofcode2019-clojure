@@ -111,8 +111,8 @@
          (pred s)) s
     :else (let [mid (unchecked-divide-int (+ s e) 2)]
             (if (pred mid)
-              (recur mid e pred)
-              (recur s mid pred)))))
+              (recur (inc mid) e pred)
+              (recur s (dec mid) pred)))))
 
 (defn p2 []
   (binary-search 1 10000000 (fn [v] (< ((_p1 v) "ORE")
