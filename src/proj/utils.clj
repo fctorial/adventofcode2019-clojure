@@ -24,6 +24,11 @@
     [Double/NEGATIVE_INFINITY Double/POSITIVE_INFINITY]
     nums))
 
+(defn manhatten [a b]
+  (->> (map - a b)
+       (map #(Math/abs %))
+       (apply +)))
+
 (defn -< [ip ops]
   (go-loop []
     (let [val (<! ip)]
