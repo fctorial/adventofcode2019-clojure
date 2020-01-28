@@ -27,18 +27,22 @@
 (defn p1 []
   (->> (nth (iterate apply-phase ip) 100)
        (take 8)
-       (join #"")))
+       (join "")))
 
 (def m-lcm (memoize lcm))
 
-(def mult-table (mapv
-                  (fn [i]
-                    [(* -1 i) 0 i])
-                  (range 10)))
-(def base-pattern-shifted (mapv inc base-pattern))
+(defn p2 [ip]
+  (nth (iterate apply-phase (flatten (repeat 10000 ip))) 1))
 
-(defn apply-phase-full [ip]
-  (let [n (count ip)
-        rep (mapv
-              (range n))]
-    ))
+(defn phase-2-back
+  [xs]
+  (reductions
+    (fn [a b] (mod (+ a b) 10))
+    xs))
+
+(defn part2
+  [xs]
+  (let [offset (Integer. (apply str (take 7 xs)))
+        whole (apply concat (repeat 10000 xs))
+        n (apply str (take 8 (reverse (nth (iterate phase-2-back (reverse (drop offset whole))) 100))))]
+    n))

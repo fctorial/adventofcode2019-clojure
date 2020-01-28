@@ -1,5 +1,5 @@
 (ns proj.utils
-  (:require [clojure.core.async :as async :refer [<! >! go-loop chan]]
+  (:require [clojure.core.async :as async :refer [<! >! <!! >!! go-loop chan close!]]
             [clojure.set :refer :all]))
 
 (defn zip-colls [& cs]
@@ -44,6 +44,16 @@
         (when val
           (>! op val)
           (recur))))))
+
+(defn closed-chan []
+  (let [ch (chan)]
+    (close! ch)
+    ch))
+
+(defn chan->seq [ch]
+  (let [val (<!! ch)]
+    (if val
+      (lazy-seq (cons val (chan->seq ch))))))
 
 (defn primes-below [n]
   (let [lim (Math/sqrt n)]

@@ -5,7 +5,9 @@
             [clojure.set :refer :all]
             [proj.utils :refer [minimax]]
             [clojure.core.async :as async :refer [>! >!! <! <!! chan go go-loop close!]]
-            [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]))
+            [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
+            [proj.vis.main :refer [synced-window]])
+  (:import (java.awt Color)))
 
 (def prog (extend-prog (read-prog "p15.txt") 1000))
 
@@ -27,6 +29,11 @@
              :empty "  "
              :water "()"
              :bot   "<>"})
+
+(def cmap {:wall  Color/black
+           :empty Color/lightGray
+           :water Color/blue
+           :bot Color/DARK_GRAY})
 
 (defn print-grid [g]
   (let [[maxX minX] (minimax (map first (keys g)))
@@ -109,23 +116,20 @@
 (defn p1 []
   (let [ip (chan 10)
         op (chan 10)
-        droid (run prog ip op "droid")]
+        droid (run prog ip op "droid")
+        win (synced-window 50 50 10 cmap 22 22)]
     (loop [pos [0 0]
            grid {pos :empty}
            border (reduce conj
                           clojure.lang.PersistentQueue/EMPTY dirs)]
+      ;(>!! win (assoc grid pos :bot))
+      ;(Thread/sleep 10)
       (if (empty? border)
         grid
         (let [nxt (first border)
               prevs (A* (grid-graph (assoc grid nxt :empty))
                         manhatten manhatten
                         pos nxt)
-              _ (when (nil? prevs)
-                  (print-grid (assoc grid nxt :empty))
-                  (println grid)
-                  (println pos nxt)
-                  (read-line)
-                  (read-line))
               pth (parse-path prevs nxt)
               final (last pth)]
           (doseq [m (drop-last pth)]

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/adventofcode.iml" filepath="$PROJECT_DIR$/adventofcode.iml" />
+      <module fileurl="file:///mnt/DATA/src/adventofcode/adventofcode/adventofcode.iml" filepath="/mnt/DATA/src/adventofcode/adventofcode/adventofcode.iml" />
     </modules>
   </component>
 </project>
