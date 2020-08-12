@@ -1,12 +1,14 @@
 (ns proj.p17
   (:require [clojure.string :refer [join split split-lines trim]]
             [proj.utils :refer :all]
-            [proj.comp :refer [run read-prog extend-prog pln]]
+            [proj.comp :refer [run read-prog extend-prog pln lint]]
             [clojure.core.async :as async :refer [>! >!! <! <!! chan go go-loop close!]]
             [proj.vis.main :refer [create-window synced-window]])
   (:import (java.awt Color)))
 
 (def prog (extend-prog (read-prog "p17.txt") 10000))
+
+(def prog_ (read-prog "p17.txt"))
 
 (defn split-coll [val coll]
   (let [[fst rst] (split-with #(not= val %) coll)]
@@ -125,8 +127,13 @@
            #(= sub (subvec seq % (+ % (count sub))))
            (range (count seq)))))
 
+(defn minimize-routine [r]
+  (apply concat (map #(if (char? (first %))
+                        %
+                        [(apply + %)]) (partition-by char? r))))
+
 (defn routine-size [r]
-  (count (join "," r)))
+  (count (join "," (minimize-routine r))))
 
 (defn index-of [pred coll] (first (keep-indexed #(if (pred %2) %1) coll)))
 
@@ -153,6 +160,9 @@
                [v k])
              m)))
 
+(defn describe-routine [[main subs]]
+  )
+
 (defn f [[main subs]]
   (let [subseqs (for [s (range (dec (count main)))
                       e (range (inc s) (count main))
@@ -164,15 +174,10 @@
                     (fn [ss] (reduce (fn [c1 c2] (concat c1 [:N] c2))
                                      (split-coll-seq ss main)))
                     subseqs)
-        [ss mn]  (reduce (fn [[ss1 mn1]
-                               [ss2 mn2]]
-                            (if (< (count mn1)
-                                   (count mn2))
-                              [ss1 mn1]
-                              [ss2 mn2]))
-                          (zip-colls subseqs new-mains))]
+        [ss mn] (reduce (fn [p1 p2] (min-key #(count (second %)) p1 p2))
+                        (zip-colls subseqs new-mains))]
     (if (empty? new-mains)
-      (throw (new Error "lol, what"))
+      (throw (new Error "do something else"))
       (let [changed-routine (first (filter
                                      #(= % (first ss))
                                      (keys subs)))]
@@ -181,9 +186,19 @@
                mn)
          (assoc subs changed-routine (vec (apply concat (map subs ss))))]))))
 
-(def init-map {:A [\L]
-               :B [\R]
-               :C [1]})
+(defmacro df [ks vex]
+  (let [vss (mapv gensym ks)
+        ex (map
+             (fn [[k vs]] (list 'def k vs))
+             (zip-colls ks vss))]
+    `(let [val# ~vex
+           ~vss val#]
+       ~@ex
+       nil)))
+
+(def init-subs {:A [\L]
+                :B [\R]
+                :C [1]})
 
 (def init-main (mapv {\L :A \R :B 1 :C} (expand-routine (extract-segs grid))))
 

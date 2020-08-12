@@ -48,6 +48,8 @@
         (recur)))
     cmder))
 
+(def black (new Color 0 0 0))
+
 (defn synced-window [xres yres bsize cmap xoff yoff]
   (let [w (* xres bsize)
         h (* yres bsize)
@@ -67,7 +69,7 @@
     (reset! img (.createImage canvas w h))
 
     (go-loop []
-      (let [frame (last (chan->seq cmder))
+      (let [frame (last (<!! (chan->seq cmder)))
             [changes _ _] (diff frame last-frame)]
         (doseq [[[_x _y] c] changes]
           (let [x (+ _x xoff)

@@ -1,7 +1,17 @@
 (ns proj.comp
-  (:require [clojure.string :refer [split trim-newline]]
-            [clojure.core.async :refer [>! <! go chan close!]]))
+  (:require [clojure.string :refer [split trim-newline] :as str]
+            [clojure.core.async :refer [>! <! go chan close! poll! <!! >!!]]
+            [proj.utils :refer [zip-colls]]))
 
+(defn _chan->seq [ch]
+  (let [val (poll! ch)]
+    (if val
+      (lazy-seq (cons val (_chan->seq ch))))))
+
+(defn chan->seq [ch]
+  (let [val (<!! ch)]
+    (if val
+      (lazy-seq (cons val (chan->seq ch))))))
 
 (def ac {1  3
          2  3
@@ -15,7 +25,7 @@
          99 0})
 
 (defn read-prog [fl]
-  (->> (split (slurp fl) #",")
+  (->> (split (str/replace (slurp fl) #"\s+" "") #",")
        (map trim-newline)
        (filter not-empty)
        (mapv bigint)))
@@ -30,6 +40,33 @@
 (defn pln [& args]
   (locking System/out
     (apply println args)))
+
+(defn format-data [prog res off]
+  (>!! res "DATA:=>")
+  (doseq [[chunk o] (zip-colls (partition 4 (subvec prog off))
+                                   (range off (+ off 1000000) 4))]
+    (>!! res (str o "\t\t: " (str/join ", " chunk)))))
+
+(defn lint [prog code_size]
+  (let [res (chan 10000)]
+    (go
+      (loop [off 0]
+        (if (>= off code_size)
+          (do
+            (format-data prog res off)
+            (close! res))
+          (let [op_full (prog off)
+                op (mod op_full 100)
+                ac (ac op)]
+            (cond
+              (= op 0) (throw (new Exception "JABBASHIT"))
+              (= op 99) (do
+                          (>! res (str off "\t\t: 99"))
+                          (recur (inc off)))
+              :default (do
+                         (>! res (str off "\t\t: " (str/join ", " (subvec prog off (+ off ac 1)))))
+                         (recur (+ off ac 1))))))))
+    (str/join "\n" (chan->seq res))))
 
 (defn run [prog input output id]
   (go
@@ -57,7 +94,6 @@
                          (if (= m \1)
                            a (mem a)))
                        args_based modes)]
-        #_(pln id op_full args_raw meta)
         (case op
           1 (recur
               (assoc mem (args_based 2) (+ (args_ref 0) (args_ref 1)))

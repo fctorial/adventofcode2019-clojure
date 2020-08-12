@@ -1,5 +1,5 @@
 (ns proj.utils
-  (:require [clojure.core.async :as async :refer [<! >! <!! >!! go-loop chan close!]]
+  (:require [clojure.core.async :as async :refer [go <! >! <!! >!! go-loop chan close!]]
             [clojure.set :refer :all]))
 
 (defn zip-colls [& cs]
@@ -51,9 +51,8 @@
     ch))
 
 (defn chan->seq [ch]
-  (let [val (<!! ch)]
-    (if val
-      (lazy-seq (cons val (chan->seq ch))))))
+  (when-let [val (<!! ch)]
+    (lazy-seq (cons val (chan->seq ch)))))
 
 (defn primes-below [n]
   (let [lim (Math/sqrt n)]
@@ -116,3 +115,23 @@
 (defn lmap [f & colls]
   (fn [i]
     (apply f (map #(% i) colls))))
+
+(def uppercase-alpha "QWERTYUIOPASDFGHJKLZXCVBNM")
+
+(defn uppercase? [s]
+  (clojure.string/includes? uppercase-alpha s))
+
+(defmacro mdef [names value]
+  (if (seqable? names)
+    (let [res-var (gensym)
+          varnames (map (fn [_] (gensym)) names)
+          defexprs (map (fn [[vn n]]
+                          `(def ~n ~vn)) (zip-colls varnames names))]
+      `(let [~res-var ~value
+             [~@varnames] ~res-var]
+         ~@defexprs
+         ~res-var))
+    `(def ~names ~value)))
+
+(defmacro m [& args]
+  ())
