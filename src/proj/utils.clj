@@ -133,5 +133,35 @@
          ~res-var))
     `(def ~names ~value)))
 
-(defmacro m [& args]
-  ())
+(defn lower-char? [c]
+  (and (char? c) (<= (int \a) (int c) (int \z))))
+(defn upper-char? [c]
+  (and (char? c) (<= (int \A) (int c) (int \Z))))
+(defn map-values [m f]
+  (into {}
+        (map (fn [[k v]] [k (f v)]) m)))
+(defn printing-chan [n]
+  (let [c (chan n)]
+    (go
+      (loop []
+        (let [nxt (<! c)]
+          (when nxt
+            (println nxt)
+            (recur)))))
+    c))
+(defn sink-chan [n]
+  (let [c (chan n)]
+    (go
+      (loop []
+        (let [_ (<! c)])))
+    c))
+
+(defn filter-out [val coll]
+  (filter #(not= val %) coll))
+
+(defn split-coll [val coll]
+  (let [[fst rst] (split-with #(not= val %) coll)]
+    (lazy-seq (cons fst (let [rst (drop 1 rst)]
+                          (if (empty? rst)
+                            nil
+                            (split-coll val rst)))))))

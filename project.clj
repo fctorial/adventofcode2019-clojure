@@ -9,4 +9,5 @@
                  [amalloy/ring-buffer "1.3.1"]
                  [hashp "0.1.0"]]
   :injections [(require 'hashp.core)]
+  :java-source-paths ["src"]
   :main proj.core)

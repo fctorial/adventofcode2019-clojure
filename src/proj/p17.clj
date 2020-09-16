@@ -4,18 +4,10 @@
             [proj.comp :refer [run read-prog extend-prog pln lint]]
             [clojure.core.async :as async :refer [>! >!! <! <!! chan go go-loop close!]]
             [proj.vis.main :refer [create-window synced-window]])
-  (:import (java.awt Color)))
+  (:import (java.awt Color)
+           (proj.java Return)))
 
 (def prog (extend-prog (read-prog "p17.txt") 10000))
-
-(def prog_ (read-prog "p17.txt"))
-
-(defn split-coll [val coll]
-  (let [[fst rst] (split-with #(not= val %) coll)]
-    (lazy-seq (cons fst (let [rst (drop 1 rst)]
-                          (if (empty? rst)
-                            nil
-                            (split-coll val rst)))))))
 
 (defn get-feed []
   (let [ip (closed-chan)
@@ -57,11 +49,10 @@
 
 (def color-map {\# (new Color 0 0 100)
                 \. (new Color 100 100 100)
-                ;\> (new Color 100 0 0)
-                ;\< (new Color 100 0 0)
+                \> (new Color 100 0 0)
+                \< (new Color 100 0 0)
                 \^ (new Color 100 0 0)
-                ;\v (new Color 100 0 0)
-                })
+                \v (new Color 100 0 0)})
 
 (defn display-grid [grid]
   (let [X (count (first grid))
@@ -120,13 +111,6 @@
                   :pos nxt_pos}
                  (conj moves steps)))))))
 
-(def grid (pad-feed (get-feed)))
-
-(defn count-of [seq sub]
-  (count (filter
-           #(= sub (subvec seq % (+ % (count sub))))
-           (range (count seq)))))
-
 (defn minimize-routine [r]
   (apply concat (map #(if (char? (first %))
                         %
@@ -148,43 +132,26 @@
       [coll])))
 
 (defn expand-routine [r]
-  (flatten (map
-             #(if (int? %)
-                (repeat % 1)
-                %)
-             r)))
+  (vec (flatten (map
+                  #(if (int? %)
+                     (if (not= (mod % 2) 0)
+                       (throw (new Exception))
+                       (repeat (/ % 2) 2))
+                     %)
+                  r))))
+
+(defn compress-routine [r]
+  (mapv
+    #(if (number? (first %))
+       (apply + %)
+       (first %))
+    (partition-by type r)))
 
 (defn rev-map [m]
   (into {}
         (map (fn [[k v]]
                [v k])
              m)))
-
-(defn describe-routine [[main subs]]
-  )
-
-(defn f [[main subs]]
-  (let [subseqs (for [s (range (dec (count main)))
-                      e (range (inc s) (count main))
-                      :let [res (subvec main s e)]
-                      :when (< (routine-size (apply concat (map subs res)))
-                               20)]
-                  res)
-        new-mains (map
-                    (fn [ss] (reduce (fn [c1 c2] (concat c1 [:N] c2))
-                                     (split-coll-seq ss main)))
-                    subseqs)
-        [ss mn] (reduce (fn [p1 p2] (min-key #(count (second %)) p1 p2))
-                        (zip-colls subseqs new-mains))]
-    (if (empty? new-mains)
-      (throw (new Error "do something else"))
-      (let [changed-routine (first (filter
-                                     #(= % (first ss))
-                                     (keys subs)))]
-        [(mapv #(if (= % :N) changed-routine
-                             %)
-               mn)
-         (assoc subs changed-routine (vec (apply concat (map subs ss))))]))))
 
 (defmacro df [ks vex]
   (let [vss (mapv gensym ks)
@@ -196,12 +163,111 @@
        ~@ex
        nil)))
 
-(def init-subs {:A [\L]
-                :B [\R]
-                :C [1]})
+;(declare grid)
+;(declare segs)
+;(declare full)
+;(declare sub1-lim)
+;(declare sub2-lim)
+;(declare test-grid)
+;(defn init []
+;  ;(def test-grid (pad-feed (mapv
+;  ;                           #(mapv first (split % #""))
+;  ;                           (split "#######...#####\n#.....#...#...#\n#.....#...#...#\n......#...#...#\n......#...###.#\n......#.....#.#\n^########...#.#\n......#.#...#.#\n......#########\n........#...#..\n....#########..\n....#...#......\n....#...#......\n....#...#......\n....#####......"
+;  ;                                  #"\n"))))
+;  ;(def grid test-grid)
+;  (def grid (pad-feed (get-feed)))
+;  (def segs (extract-segs grid))
+;  (def full (expand-routine segs))
+;  (def sub1-lim (last (filter
+;                        #(<= (routine-size (compress-routine (subvec full 0 %)))
+;                             20)
+;                        (range (count full)))))
+;  (def sub2-lim (last (filter
+;                        #(<= (routine-size (compress-routine (subvec full (- (count full) %))))
+;                             20)
+;                        (range (count full))))))
 
-(def init-main (mapv {\L :A \R :B 1 :C} (expand-routine (extract-segs grid))))
+(defn is-prefix [pref coll]
+  (and (>= (count coll)
+           (count pref))
+       (every? #(apply = %)
+               (zip-colls pref coll))))
+
+(defn refactor
+  ([submap full] (refactor submap full []))
+  ([submap remaining result] (if (empty? remaining)
+                               result
+                               (let [[name routine :as prefix] (first (filter (fn [[_ routine]] (is-prefix routine remaining))
+                                                                              submap))]
+                                 (if prefix
+                                   (recur submap
+                                          (drop (count routine) remaining)
+                                          (conj result name)))))))
+
+(defn find-result []
+  (try
+    (let [grid (pad-feed (get-feed))
+          segs (extract-segs grid)
+          full (expand-routine segs)
+          sub1-lim (last (filter
+                           #(<= (routine-size (compress-routine (subvec full 0 %)))
+                                20)
+                           (range (count full))))
+          sub2-lim (last (filter
+                           #(<= (routine-size (compress-routine (subvec full (- (count full) %))))
+                                20)
+                           (range (count full))))]
+      (doseq [g1 (range 1 sub1-lim)
+              g2 (range 1 sub2-lim)]
+        (let [lower (- (count full) g2)
+              sub1 (subvec full 0 g1)
+              sub2 (subvec full (- (count full) g2))]
+          (doseq [sub3-start (range g1 lower)
+                  sub3-end (range (inc sub3-start) (dec (first (filter
+                                                                 #(or
+                                                                    (>= % lower)
+                                                                    (> (routine-size (compress-routine (subvec full sub3-start %)))
+                                                                       20))
+                                                                 (range sub3-start (inc lower))))))
+                  :let [sub3 (subvec full sub3-start sub3-end)]
+                  :when (<= (routine-size (compress-routine sub3))
+                            20)]
+            (let [routine-map {\A sub1
+                               \B sub2
+                               \C sub3}
+                  main (refactor routine-map
+                                 full)]
+              (when (and (not (empty? main))
+                         (<= (routine-size main) 20))
+                (throw (new Return {:main main
+                                    :subs (map-values routine-map compress-routine)}))))))))
+    (catch Return ret
+      (.-value ret))))
+
+(defn compile-routine [r]
+  (join "," r))
+
+(def result {:main [\A \B \A \C \B \A \C \A \C \B],
+             :subs {\A [\L 12 \L 8 \L 8], \B [\L 12 \R 4 \L 12 \R 6], \C [\R 4 \L 12 \L 12 \R 6]}})
 
 (defn p2 []
-  ())
-
+  (let [result (find-result)
+        main (compile-routine (result :main))
+        subs (map compile-routine (vals (result :subs)))
+        ip (chan 40960)
+        op (chan 40960)
+        prog (assoc prog 0 2)
+        task (run prog ip op "processor")]
+    (doseq [c main]
+      (>!! ip (int c)))
+    (>!! ip (int \newline))
+    (doseq [sub subs]
+      (doseq [c sub]
+        (>!! ip (int c)))
+      (>!! ip (int \newline)))
+    (>!! ip (int \n))
+    (>!! ip (int \newline))
+    (close! ip)
+    (<!! task)
+    (close! op)
+    (last (chan->seq op))))
