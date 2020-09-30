@@ -10,4 +10,5 @@
                  [hashp "0.1.0"]]
   :injections [(require 'hashp.core)]
   :java-source-paths ["src"]
+  ;:jvm-opts ["-Xmx6g"]
   :main proj.core)
