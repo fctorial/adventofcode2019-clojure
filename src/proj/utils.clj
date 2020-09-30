@@ -165,3 +165,21 @@
                           (if (empty? rst)
                             nil
                             (split-coll val rst)))))))
+
+(defn dijkstra [neighbour-fn dist-fn src]
+  (loop [border (priority-map-keyfn first src [0 nil])
+         visited {}]
+    (if (empty? border)
+      visited
+      (let [[curr [curr-dist parent]] (peek border)
+            border (pop border)
+            neighbours (neighbour-fn curr)]
+        (recur
+          (reduce (fn [border neighbour]
+                    (let [new-dist (+ curr-dist (dist-fn curr neighbour))]
+                      (if (and (or (not (contains? visited neighbour))
+                                   (< new-dist (first (visited neighbour))))
+                               (< new-dist (get-in border [neighbour 0] Long/MAX_VALUE)))
+                        (assoc border neighbour [new-dist curr])
+                        border))) border neighbours)
+          (assoc visited curr [curr-dist parent]))))))

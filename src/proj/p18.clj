@@ -40,7 +40,7 @@
                                 [x y]))]
                  (map-values keymap (comp valmap first upper-case))))
 (def all-keys (set (keys key-index)))
-(def all-gates (set (vals key-index)))
+(def all-gates (set (filter identity (vals key-index))))
 
 (def bot-loc (coordinates-of grid__ \@))
 
@@ -65,40 +65,23 @@
       [[1 0] [-1 0]
        [0 1] [0 -1]])))
 
-(defn dijkstra [neighbour-fn dist-fn src]
-  (loop [border (priority-map-keyfn first src [0 nil])
-         visited {}]
-    (if (empty? border)
-      visited
-      (let [[curr [curr-dist parent]] (peek border)
-            border (pop border)
-            neighbours (neighbour-fn curr)]
-        (recur
-          (reduce (fn [border neighbour]
-                    (let [new-dist (+ curr-dist (dist-fn curr neighbour))]
-                      (if (or (not (contains? visited neighbour))
-                              (< new-dist (first (visited neighbour))))
-                        (assoc border neighbour [new-dist curr])
-                        border))) border neighbours)
-          (assoc visited curr [curr-dist parent]))))))
-
 (def nodes (set (filter identity
-                        (concat (for [x (range X)
-                                      y (range Y)
-                                      :let [coord [x y]]
-                                      :when (and (= (get-in grid_ coord) :Empty)
-                                                 (> (count (neighbours_ grid_ coord))
-                                                    2))]
-                                  coord)
-                                all-keys
-                                all-gates
-                                [bot-loc]))))
+                        (concat #_(for [x (range X)
+                                        y (range Y)
+                                        :let [coord [x y]]
+                                        :when (and (= (get-in grid_ coord) :Empty)
+                                                   (> (count (neighbours_ grid_ coord))
+                                                      2))]
+                                    coord)
+                          all-keys
+                          all-gates
+                          [bot-loc]))))
 
-(defn neighbours_2 [grid nodes loc]
+(defn neighbours_2 [nodes loc]
   (if (nodes loc)
     []
     (filter
-      #(or (= (get-in grid %)
+      #(or (= (get-in grid_ %)
               :Empty)
            (nodes %))
       (map
@@ -108,7 +91,7 @@
 
 (def grid (->> nodes
                (map (fn [node]
-                      (let [toph (dijkstra #(neighbours_2 grid_ (disj nodes node) %) ; <<<<<<<<<<<<<
+                      (let [toph (dijkstra #(neighbours_2 (disj nodes node) %) ; <<<<<<<<<<<<<
                                            (fn [& _] 1)
                                            node)]
                         [node (->> nodes
@@ -118,58 +101,44 @@
                                    (into {}))])))
                (into {})))
 
-(defn minimum-chan [c]
-  (go
-    (loop [curr Long/MAX_VALUE]
-      (let [[nxt] (<! c)]
-        (if (nil? nxt)
-          curr
-          (let [new_min (min nxt curr)]
-            (if (= new_min nxt)
-              (println "Min: " new_min))
-            (recur new_min)))))))
+(def meta-start {:bot          bot-loc
+                 :closed-gates all-gates
+                 :keys-left    all-keys})
 
-(defn f [grid key-index closed-gates loc travelled
-         logger sub-counter fin-counter]
-  (swap! sub-counter inc)
-  (go
-    (if (empty? key-index)
-      (>! logger [travelled])
-      (let [dists (dijkstra (fn [loc]
-                              (filter #(not (closed-gates %))
-                                      (keys (grid loc))))
-                            (fn [curr neighbour] (get-in grid [curr neighbour]))
-                            loc)
-            reachable (for [k (keys key-index)
-                            :when (dists k)]
-                        k)]
-        (doseq [target reachable]
-          (let [gate (key-index target)
-                [dist _] (dists target)
-                travelled_new (+ travelled dist)]
-            (f grid
-               (dissoc key-index target)
-               (disj closed-gates gate)
-               target
-               travelled_new
+(defn meta-neighbours [{bot :bot gs :closed-gates ks :keys-left}]
+  (for [new-loc (filter
+                  #(not (get gs % false))
+                  (keys (grid bot)))]
+    {:bot          new-loc
+     :closed-gates (disj gs (key-index new-loc))
+     :keys-left    (disj ks new-loc)}))
 
-               logger
-               sub-counter
-               fin-counter)))))
-    (swap! fin-counter inc)
-    (if (= @sub-counter
-           @fin-counter)
-      (close! logger))))
+(defn meta-dist [curr neighbour]
+  (get-in grid [(curr :bot) (neighbour :bot)]))
 
-(defn p1 []
-  (let [logger (chan 1024)
-        sub-count (atom 0)
-        finish-count (atom 0)]
-    (go
-      (loop []
-        (println @finish-count @sub-count)
-        (Thread/sleep 1000)
-        (recur)))
-    (f grid key-index (set (vals key-index)) bot-loc 0
-       logger sub-count finish-count)
-    (<!! (minimum-chan logger))))
+(defn p1 [meta-start]
+  (let [toph (dijkstra meta-neighbours
+                       meta-dist
+                       meta-start)
+        [last [dist _]] (->> toph
+                             (filter #(empty? (:keys-left (first %))))
+                             (apply min-key #(first (second %))))
+        path (loop [coll `(~last)]
+               (let [nxt (second (toph (first coll)))]
+                 (if nxt
+                   (recur (cons nxt coll))
+                   coll)))
+        key-order (loop [order []
+                         keys-left all-keys
+                         locs (map :bot path)]
+                    (if (empty? locs)
+                      order
+                      (let [nxt-loc (first locs)]
+                        (recur (if (keys-left nxt-loc)
+                                 (conj order nxt-loc)
+                                 order)
+                               (disj keys-left nxt-loc)
+                               (rest locs)))))]
+    {:dist dist
+     :path path
+     :keys key-order}))
