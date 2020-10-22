@@ -1,24 +1,23 @@
-(ns proj.p18
+(ns proj.p18_2
   (:require [clojure.string :refer [join split split-lines trim upper-case] :as str]
             [proj.utils :refer :all]
             [clojure.data.priority-map :refer [priority-map-keyfn]]
             [proj.comp :refer [run read-prog extend-prog pln]]
             [clojure.core.async :as async :refer [>! >!! <! <!! chan go go-loop close! timeout]]
-            [proj.vis.main :refer [create-window synced-window]])
-  (:import (java.awt Color)))
+            [proj.vis.main :refer [create-window synced-window]]))
 
-(def grid__ (->> (slurp "p18.txt")
+(def grid__ (->> (slurp "t.txt")
                  split-lines
                  (mapv #(mapv (fn [k] (get {\# :Wall \. :Empty} k k)) %))))
 (def X (count grid__))
 (def Y (count (first grid__)))
-
-(defn coordinates-of [grid c]
-  (first (for [x (range (count grid))
-               y (range (count (grid x)))
-               :when (= (get-in grid [x y])
-                        c)]
-           [x y])))
+(def MIDX (/ (dec X) 2))
+(def MIDY (/ (dec Y) 2))
+(def grid__ (-> grid__
+                (assoc-in [(dec MIDX) MIDY] :Wall)
+                (assoc-in [(inc MIDX) MIDY] :Wall)
+                (assoc-in [MIDX (dec MIDY)] :Wall)
+                (assoc-in [MIDX (inc MIDY)] :Wall)))
 
 (def key-index (let [keymap (reduce
                               (fn [res idx]
@@ -42,7 +41,10 @@
 (def all-keys (set (keys key-index)))
 (def all-gates (set (filter identity (vals key-index))))
 
-(def bot-loc (coordinates-of grid__ \@))
+(def bot-locs [[(dec MIDX) (dec MIDY)]
+               [(dec MIDX) (inc MIDY)]
+               [(inc MIDX) (dec MIDY)]
+               [(inc MIDX) (inc MIDY)]])
 
 (def grid_ (mapv
              #(mapv
@@ -67,15 +69,15 @@
 
 (def nodes (set (filter identity
                         (concat #_(for [x (range X)
-                                        y (range Y)
-                                        :let [coord [x y]]
-                                        :when (and (= (get-in grid_ coord) :Empty)
-                                                   (> (count (neighbours_ grid_ coord))
-                                                      2))]
-                                    coord)
-                          all-keys
-                          all-gates
-                          [bot-loc]))))
+                                      y (range Y)
+                                      :let [coord [x y]]
+                                      :when (and (= (get-in grid_ coord) :Empty)
+                                                 (> (count (neighbours_ grid_ coord))
+                                                    2))]
+                                  coord)
+                                all-keys
+                                all-gates
+                                bot-locs))))
 
 (defn neighbours_2 [nodes loc]
   (if (nodes loc)
@@ -101,11 +103,11 @@
                                    (into {}))])))
                (into {})))
 
-(def meta-start {:bot          bot-loc
+(def meta-start {:bots         bot-locs
                  :closed-gates all-gates
                  :keys-left    all-keys})
 
-(defn meta-neighbours [{bot :bot gs :closed-gates ks :keys-left}]
+(defn meta-neighbours-1 [{bot :bot gs :closed-gates ks :keys-left}]
   (for [new-loc (filter
                   #(not (get gs % false))
                   (keys (grid bot)))]
@@ -113,10 +115,24 @@
      :closed-gates (disj gs (key-index new-loc))
      :keys-left    (disj ks new-loc)}))
 
-(defn meta-dist [curr neighbour]
-  (get-in grid [(curr :bot) (neighbour :bot)]))
+(def c 0)
+(defn meta-neighbours [{bots :bots gs :closed-gates ks :keys-left}]
+  (def c (inc c))
+  (apply concat (for [[bot idx] (zip-colls bots (range))
+                      :let [n-1 (meta-neighbours-1 {:bot          bot
+                                                    :closed-gates gs
+                                                    :keys-left    ks})]]
+                  (for [n n-1]
+                    {:bots         (assoc bots idx (n :bot))
+                     :closed-gates (n :closed-gates)
+                     :keys-left    (n :keys-left)}))))
 
-(defn p1 [meta-start]
+(defn meta-dist [curr neighbour]
+  (apply max (map (fn [[a b]] (get-in grid [a b] 0))
+                  (zip-colls (curr :bots)
+                             (neighbour :bots)))))
+
+(defn p1 []
   (let [toph (dijkstra meta-neighbours
                        meta-dist
                        meta-start)

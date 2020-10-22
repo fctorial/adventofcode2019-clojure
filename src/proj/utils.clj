@@ -1,6 +1,7 @@
 (ns proj.utils
   (:require [clojure.core.async :as async :refer [go <! >! <!! >!! go-loop chan close!]]
-            [clojure.set :refer :all]))
+            [clojure.set :refer :all]
+            [clojure.data.priority-map :refer [priority-map-keyfn]]))
 
 (defn zip-colls [& cs]
   (partition (count cs)
