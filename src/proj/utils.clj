@@ -184,3 +184,40 @@
                         (assoc border neighbour [new-dist curr])
                         border))) border neighbours)
           (assoc visited curr [curr-dist parent]))))))
+
+(defn bsearch-upper [s e val-fn]
+  (if (= s e)
+    s
+    (if (and (= s (dec e))
+             (val-fn s))
+      s
+      (let [mid (int (/ (+ s e) 2))
+            vs (val-fn s)
+            ve (val-fn e)
+            vm (val-fn mid)]
+        (if vs
+          (if ve
+            e
+            (if vm
+              (bsearch-upper mid e val-fn)
+              (bsearch-upper s mid val-fn)))
+          (throw (new IllegalStateException (str [s e]))))))))
+
+(defn bsearch-lower [s e val-fn]
+  (if (<= (- e s) 1)
+    (if (val-fn s)
+      s
+      (if (val-fn e)
+        e
+        (throw (new IllegalStateException (str [s e])))))
+    (let [mid (int (/ (+ s e) 2))
+          vs (val-fn s)
+          ve (val-fn e)
+          vm (val-fn mid)]
+      (if vs
+        s
+        (if ve
+          (if vm
+            (bsearch-lower s mid val-fn)
+            (bsearch-lower mid e val-fn))
+          (throw (new IllegalStateException (str [s e]))))))))
