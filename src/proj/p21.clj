@@ -30,4 +30,4 @@
     nil))
 
 (defn p1 []
-  )
+  (try-prog "NOT C T" "NOT C J" "AND T J" "NOT D T" "NOT T T" "AND T J" "NOT A T" "OR T J"))
