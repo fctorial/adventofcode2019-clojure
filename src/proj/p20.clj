@@ -1,9 +1,9 @@
 (ns proj.p20
   (:require [clojure.string :as str :refer [split-lines]]
             [clojure.data.priority-map :refer [priority-map-by priority-map-keyfn]]
-            [proj.utils :refer [zip-colls iter-n dijkstra filter-out]]))
+            [proj.utils :refer [zip-colls iter-n dijkstra filter-out cfind A*]]))
 
-(def g1 (->> (slurp "t.txt")
+(def g1 (->> (slurp "p20.txt")
              split-lines
              (mapv vec)))
 (def X (count g1))
@@ -61,8 +61,6 @@
                   (apply concat)
                   (into {})))
 
-(defn cfind [pred coll]
-  (first (filter pred coll)))
 
 (defn deep-merge [v & vs]
   (letfn [(rec-merge [v1 v2]
@@ -101,37 +99,36 @@
                     start)
           end)))
 
-(defn A*
-  [neighbour-fn dist-fn h start goal]
-  (loop [visited {}
-         queue (priority-map-keyfn #(* 1 (first %)) start [0 0 nil])]
-    (when (not (empty? queue))
-      (let [[current [_ current-score previous]] (peek queue)
-            _ (println current)
-            visited (assoc visited current [current-score previous])]
-        (if (= current goal)
-          visited
-          (recur visited (reduce (fn [queue node]
-                                   (let [score (+ current-score (dist-fn current node))]
-                                     (if (and (not (contains? visited node))
-                                              (or (not (contains? queue node))
-                                                  (< score (get-in queue [node 1]))))
-                                       (assoc queue node [(+ score (h node)) score current])
-                                       queue)))
-                                 (pop queue)
-                                 (neighbour-fn current))))))))
+(def rall (reduce
+            (fn [res n]
+              (assoc res n (first (cfind (fn [[_ nodes]]
+                                           (cfind #(= n (:loc %)) nodes)) all))))
+            {}
+            nodes))
 
 (defn p2 []
-  (A* (fn [{loc :loc layer :layer}]
-        (->> (keys (dists loc))
-             (map (fn [l] {:loc   l
-                           :layer (+ layer (loffs l))}))
-             (filter (fn [{layer :layer}] (> layer 0)))))
-      (fn [{loc1 :loc} {loc2 :loc}]
-        (get-in dists [loc1 loc2]))
-      (fn [{layer :layer}] layer)
-      {:loc   start
-       :layer 1}
-      {:loc   end
-       :layer 1}))
+  (first ((A* (fn [{loc :loc layer :layer}]
+          (->> (keys (dists loc))
+               (map (fn [l] {:loc   l
+                             :layer (+ layer (if (= loc (portals l))
+                                               (loffs loc) 0))}))
+               (filter (fn [{layer :layer}] (> layer 0)))))
+        (fn [{loc1 :loc} {loc2 :loc}]
+          (get-in dists [loc1 loc2]))
+        (fn [{layer :layer}] layer)
+        {:loc   start
+         :layer 1}
+        {:loc   end
+         :layer 1})
+    {:loc   end
+     :layer 1})))
 
+(defn visualize [res]
+  (loop [curr {:loc end :layer 1}
+         p ()]
+    (let
+      [[dist parent] (res curr)]
+      (if (nil? parent)
+        p
+        (recur parent
+               (cons (assoc curr :name (rall (curr :loc))) p))))))

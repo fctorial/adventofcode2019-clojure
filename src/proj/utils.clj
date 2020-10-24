@@ -185,23 +185,24 @@
                         border))) border neighbours)
           (assoc visited curr [curr-dist parent]))))))
 
-(defn bsearch-upper [s e val-fn]
-  (if (= s e)
-    s
-    (if (and (= s (dec e))
-             (val-fn s))
-      s
-      (let [mid (int (/ (+ s e) 2))
-            vs (val-fn s)
-            ve (val-fn e)
-            vm (val-fn mid)]
-        (if vs
-          (if ve
-            e
-            (if vm
-              (bsearch-upper mid e val-fn)
-              (bsearch-upper s mid val-fn)))
-          (throw (new IllegalStateException (str [s e]))))))))
+(defn A*
+  [neighbour-fn dist-fn h start goal]
+  (loop [visited {}
+         queue (priority-map-keyfn #(* 1 (first %)) start [0 0 nil])]
+    (when (not (empty? queue))
+      (let [[current [_ current-score previous]] (peek queue)
+            visited (assoc visited current [current-score previous])]
+        (if (= current goal)
+          visited
+          (recur visited (reduce (fn [queue node]
+                                   (let [score (+ current-score (dist-fn current node))]
+                                     (if (and (not (contains? visited node))
+                                              (or (not (contains? queue node))
+                                                  (< score (get-in queue [node 1]))))
+                                       (assoc queue node [(+ score (h node)) score current])
+                                       queue)))
+                                 (pop queue)
+                                 (neighbour-fn current))))))))
 
 (defn bsearch-lower [s e val-fn]
   (if (<= (- e s) 1)
@@ -221,3 +222,6 @@
             (bsearch-lower s mid val-fn)
             (bsearch-lower mid e val-fn))
           (throw (new IllegalStateException (str [s e]))))))))
+
+(defn cfind [pred coll]
+  (first (filter pred coll)))
