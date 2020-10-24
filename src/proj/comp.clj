@@ -73,7 +73,11 @@
     (loop [mem prog
            meta {:ip   0
                  :base 0}]
-      (let [ip (meta :ip)
+      (let [log (if id
+                  (fn [msg]
+                    (println msg))
+                  (fn [& _]))
+            ip (meta :ip)
             op_full (mem ip)
             op (mod op_full 100)
             ac (ac op)
@@ -95,37 +99,57 @@
                            a (mem a)))
                        args_based modes)]
         (case op
-          1 (recur
-              (assoc mem (args_based 2) (+ (args_ref 0) (args_ref 1)))
-              nxt_meta)
-          2 (recur
-              (assoc mem (args_based 2) (* (args_ref 0) (args_ref 1)))
-              nxt_meta)
-          3 (recur
-              (assoc mem (args_based 0) (<! input))
-              nxt_meta)
+          1 (do
+              (log (str "ADD *" (args_based 0) " *" (args_based 1) " => " (args_based 2)))
+              (recur
+               (assoc mem (args_based 2) (+ (args_ref 0) (args_ref 1)))
+               nxt_meta))
+          2 (do
+              (log (str "MUL *" (args_based 0) " *" (args_based 1) " => " (args_based 2)))
+              (recur
+               (assoc mem (args_based 2) (* (args_ref 0) (args_ref 1)))
+               nxt_meta))
+          3 (do
+              (log (str "INP => " (args_based 0)))
+              (recur
+               (assoc mem (args_based 0) (<! input))
+               nxt_meta))
           4 (do
-              (>! output (args_ref 0))
+              (log (str "OUT <= *" (args_based 0)))
+              (do
+               (>! output (args_ref 0))
+               (recur mem
+                      nxt_meta)))
+          5 (do
+              (log (str "IF *" (args_based 0) " != 0; JMP *" (args_based 1)))
               (recur mem
-                     nxt_meta))
-          5 (recur mem
-                   (if (zero? (args_ref 0))
-                     nxt_meta
-                     (assoc nxt_meta :ip (args_ref 1))))
-          6 (recur mem
-                   (if (zero? (args_ref 0))
-                     (assoc nxt_meta :ip (args_ref 1))
-                     nxt_meta))
-          7 (recur
-              (assoc mem (args_based 2)
-                         (if (< (args_ref 0) (args_ref 1))
-                           1 0))
-              nxt_meta)
-          8 (recur
-              (assoc mem (args_based 2)
-                         (if (= (args_ref 0) (args_ref 1))
-                           1 0))
-              nxt_meta)
-          9 (recur mem
-                   (update nxt_meta :base #(+ % (args_ref 0))))
-          99 mem)))))
+                    (if (zero? (args_ref 0))
+                      nxt_meta
+                      (assoc nxt_meta :ip (args_ref 1)))))
+          6 (do
+              (log (str "IF *" (args_based 0) " == 0; JMP *" (args_based 1)))
+              (recur mem
+                    (if (zero? (args_ref 0))
+                      (assoc nxt_meta :ip (args_ref 1))
+                      nxt_meta)))
+          7 (do
+              (log (str "*" (args_based 2) " = *" (args_based 0) " < *" (args_based 1)))
+              (recur
+               (assoc mem (args_based 2)
+                          (if (< (args_ref 0) (args_ref 1))
+                            1 0))
+               nxt_meta))
+          8 (do
+              (log (str "*" (args_based 2) " = *" (args_based 0) " == *" (args_based 1)))
+              (recur
+               (assoc mem (args_based 2)
+                          (if (= (args_ref 0) (args_ref 1))
+                            1 0))
+               nxt_meta))
+          9 (do
+              (log (str "__BASE__ = *" (args_based 0)))
+              (recur mem
+                    (update nxt_meta :base #(+ % (args_ref 0)))))
+          99 (do
+               (log "")
+               mem))))))
