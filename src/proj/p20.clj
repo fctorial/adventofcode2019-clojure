@@ -2,7 +2,7 @@
   (:require [clojure.string :as str :refer [split-lines]]
             [proj.utils :refer [zip-colls iter-n dijkstra filter-out]]))
 
-(def g1 (->> (slurp "p20.txt")
+(def g1 (->> (slurp "t.txt")
              split-lines
              (mapv vec)))
 (def X (count g1))
@@ -16,8 +16,10 @@
         :when (and (Character/isAlphabetic (int ch1))
                    (Character/isAlphabetic (int ch2)))]
     [(keyword (str ch1 ch2))
-     [x (if (= \. (get-in g1 [x a]))
-          a b)]]))
+     {:loc  [x (if (= \. (get-in g1 [x a]))
+                 a b)]
+      :loff (if (= b -1)
+              -1 1)}]))
 (def vert
   (for [y (range Y)
         [b r1 r2 a] (iter-n (range -1 (inc X)) 4)
@@ -26,9 +28,11 @@
         :when (and (Character/isAlphabetic (int ch1))
                    (Character/isAlphabetic (int ch2)))]
     [(keyword (str ch1 ch2))
-     [(if (= \. (get-in g1 [a y]))
-        a b)
-      y]]))
+     {:loc  [(if (= \. (get-in g1 [a y]))
+               a b)
+             y]
+      :loff (if (= b -1)
+              -1 1)}]))
 
 (def all (reduce
            (fn [res [name loc]]
@@ -76,13 +80,14 @@
                                      (map #(mapv (partial apply +) (zip-colls c %))
                                           [[1 0] [-1 0] [0 1] [0 -1]])))
                                  (fn [& _] 1)
-                                 nxt)
-                  found (filter toph (filter-out nxt nodes))]
+                                 (:loc nxt))
+                  found (filter #(toph (:loc %)) (filter-out nxt nodes))]
               (recur
                 (rest left)
                 (deep-merge ds
                             {(rall nxt)
-                             (into {} (map (fn [n] [(rall n) (inc (first (toph n)))]) found))}))))))
+                             (into {} (map (fn [n] [(rall n) (inc (first (toph (:loc n))))])
+                                           found))}))))))
 
 (defn p1 []
   (dec (first (:ZZ (dijkstra (fn [n]
