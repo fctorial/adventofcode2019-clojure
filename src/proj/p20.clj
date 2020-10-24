@@ -45,27 +45,24 @@
            {}
            (concat horiz vert)))
 
-(def start (first (all :AA)))
-(def end (first (all :ZZ)))
-
-(def gates (dissoc all :AA :ZZ))
-
-(defn cfind [pred coll]
-  (first (filter pred coll)))
-
-(def nodes (set (apply concat (vals all))))
-(def loffs (->> nodes
+(def nodes (map :loc (set (apply concat (vals all)))))
+(def loffs (->> (set (apply concat (vals all)))
                 (map (fn [{loc :loc :as n}]
                        [loc (n :loff)]))
                 (into {})))
 
-(def rall (->> nodes
-               (map
-                 (fn [n]
-                   [(:loc n) (first (cfind (fn [[_ locs]]
-                                             (= n (cfind #(= % n) locs)))
-                                           all))]))
-               (into {})))
+(def start (:loc (first (all :AA))))
+(def end (:loc (first (all :ZZ))))
+
+(def portals (->> (dissoc all :AA :ZZ)
+                  (map (fn [[_ [{loc1 :loc} {loc2 :loc}]]]
+                         [[loc1 loc2]
+                          [loc2 loc1]]))
+                  (apply concat)
+                  (into {})))
+
+(defn cfind [pred coll]
+  (first (filter pred coll)))
 
 (defn deep-merge [v & vs]
   (letfn [(rec-merge [v1 v2]
@@ -87,26 +84,22 @@
                                         (map #(mapv (partial apply +) (zip-colls c %))
                                              [[1 0] [-1 0] [0 1] [0 -1]])))
                                     (fn [& _] 1)
-                                    (:loc nxt))
-                     found (filter #(toph (:loc %)) (filter-out nxt nodes))]
+                                    nxt)
+                     found (filter #(toph %) (filter-out nxt nodes))]
                  (recur
                    (rest left)
                    (deep-merge ds
-                               {(:loc nxt)
-                                (into {} (map (fn [n] [(:loc n) (inc (first (toph (:loc n))))])
-                                              found))}))))))
-
-(def g2 (->> dists
-             (map (fn [[k m2]] {(rall k) (->> m2
-                                              (map (fn [[k d]] [(rall k) d]))
-                                              (into {}))}))
-             (apply deep-merge)))
+                               {nxt
+                                (dissoc (into {(portals nxt) 1} (map (fn [n] [n (first (toph n))])
+                                                                     found))
+                                        nil)}))))))
 
 (defn p1 []
-  (dec (first (:ZZ (dijkstra (fn [n]
-                               (keys (g2 n)))
-                             #(get-in g2 [%1 %2])
-                             :AA)))))
+  (first ((dijkstra (fn [n]
+                      (keys (dists n)))
+                    #(get-in dists [%1 %2])
+                    start)
+          end)))
 
 (defn A*
   [neighbour-fn dist-fn h start goal]
@@ -131,15 +124,14 @@
 (defn p2 []
   (A* (fn [{loc :loc layer :layer}]
         (->> (keys (dists loc))
-             (map (fn [l] {:loc l
+             (map (fn [l] {:loc   l
                            :layer (+ layer (loffs l))}))
              (filter (fn [{layer :layer}] (> layer 0)))))
       (fn [{loc1 :loc} {loc2 :loc}]
         (get-in dists [loc1 loc2]))
-      (fn [{layer :layer}]
-        (Math/abs layer))
-      {:loc   (:loc start)
+      (fn [{layer :layer}] layer)
+      {:loc   start
        :layer 1}
-      {:loc   (:loc end)
+      {:loc   end
        :layer 1}))
 
