@@ -2,7 +2,7 @@
   (:require [proj.utils :refer [cfind]]
             [clojure.string :as str]))
 
-(def N 10007)
+(def N 119315717514047)
 (def orig (fn [i] i))
 
 (defn dealNew [_]
