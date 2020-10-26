@@ -6,13 +6,6 @@
               read-prog
               (extend-prog 1000)))
 
-(defn printing-chan [buf]
-  (let [ch (chan buf)]
-    (go-loop []
-      (println (<! ch))
-      (recur))
-    ch))
-
 (defn p1 []
   (let [ip (chan 1)
         op (chan 10)]

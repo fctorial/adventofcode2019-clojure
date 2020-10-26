@@ -141,8 +141,8 @@
 (defn map-values [m f]
   (into {}
         (map (fn [[k v]] [k (f v)]) m)))
-(defn printing-chan [n]
-  (let [c (chan n)]
+(defn printing-chan []
+  (let [c (chan 1024)]
     (go
       (loop []
         (let [nxt (<! c)]
@@ -225,3 +225,9 @@
 
 (defn cfind [pred coll]
   (first (filter pred coll)))
+
+(defn trace [a]
+  (println (type a) " => " a)
+  a)
+
+
