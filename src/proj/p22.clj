@@ -1,8 +1,8 @@
-(ns proj.proj.p22
+(ns proj.p22
   (:require [proj.utils :refer [cfind]]
             [clojure.string :as str]))
 
-(def N 119315717514047)
+(def N 10007)
 (def orig (fn [i] i))
 
 (defn dealNew [_]

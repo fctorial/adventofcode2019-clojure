@@ -75,7 +75,7 @@
                  :base 0}]
       (let [log (if id
                   (fn [msg]
-                    (println msg))
+                    (println id "\t: " msg))
                   (fn [& _]))
             ip (meta :ip)
             op_full (mem ip)
