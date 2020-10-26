@@ -56,8 +56,11 @@
   (apply try-prog (concat p ["WALK"])))
 
 (defn try-prog-2 [& p]
-  (apply try-prog (concat p ["RUN"])))
+  (time (apply try-prog (concat p ["RUN"])))
+  (println (count p)))
 
 (defn p1 []
   (try-prog-1 "NOT C J" "NOT D T" "NOT T T" "AND T J" "NOT A T" "OR T J"))
+(defn p2 []
+  (try-prog-2 "NOT B J" "NOT C T" "OR T J" "NOT G T" "OR T J" "AND D J" "AND H J" "NOT B T" "NOT T T" "AND C T" "NOT T T" "AND T J" "NOT A T" "OR T J"))
 
