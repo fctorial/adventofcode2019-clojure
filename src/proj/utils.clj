@@ -147,7 +147,9 @@
       (loop []
         (let [nxt (<! c)]
           (when nxt
-            (println nxt)
+            (if (< nxt 255)
+              (print (char nxt))
+              (println nxt))
             (recur)))))
     c))
 (defn sink-chan [n]
