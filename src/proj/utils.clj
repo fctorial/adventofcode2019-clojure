@@ -230,4 +230,7 @@
   (println (type a) " => " a)
   a)
 
-
+(defmacro dthrow [sym o]
+  `(do
+     (def ~sym ~o)
+     ~o))
