@@ -2,7 +2,7 @@
   (:require [clojure.string :as str :refer [split-lines]]
             [proj.utils :refer [trace dthrow]]))
 
-(def init (as-> "t.txt" $
+(def init (as-> "p24.txt" $
                 (slurp $)
                 (split-lines $)
                 (map #(str/split % #"") $)
@@ -78,7 +78,7 @@
                                          (= ri 2) (mapv (fn [i] [1 i (inc l)]) idxs)
                                          (= ri 4) (mapv (fn [i] [5 i (inc l)]) idxs)
                                          (= ci 2) (mapv (fn [i] [i 1 (inc l)]) idxs)
-                                         (= ci 4) (mapv (fn [i] [5 i (inc l)]) idxs)
+                                         (= ci 4) (mapv (fn [i] [i 5 (inc l)]) idxs)
                                          :default :fuck)
                  :default [nloc]))
              n1))))
@@ -104,14 +104,17 @@
               n))))
       b scope)))
 
-(defn vis [g layer]
-  (println (str/join "\n"
-                     (map
-                       #(str/join "" %)
-                       (reduce
-                         (fn [res [r c]]
-                           (assoc-in res [(dec r) (dec c)] \#))
-                         (mapv (fn [_] (vec (repeat 5 \.))) (range 5))
-                         (filter (fn [[_ _ l]]
-                                   (= layer l))
-                                 g))))))
+(defn vis
+  ([g] (doseq [l (sort (set (map #(nth % 2) g)))]
+         (println "Depth " l)
+         (vis g l)))
+  ([g layer] (println (str/join "\n"
+                                (map
+                                  #(str/join "" %)
+                                  (reduce
+                                    (fn [res [r c]]
+                                      (assoc-in res [(dec r) (dec c)] \#))
+                                    (mapv (fn [_] (vec (repeat 5 \.))) (range 5))
+                                    (filter (fn [[_ _ l]]
+                                              (= layer l))
+                                            g)))))))
