@@ -61,7 +61,7 @@
         natVal (atom [nil nil])
         nat (go
               (loop [lastY nil]
-                (<! (timeout 1000))
+                (<! (timeout 150))
                 (let [activeC (->> idle
                                    (map deref)
                                    (filter #(< % 2))
@@ -77,7 +77,7 @@
                           (recur Y))))
                     (recur lastY)))))
         ops (mapv (fn [_] (chan 10240)) (range 50))
-        nics (mapv (fn [[ip op id]] (run prog ip op (if (zero? id) id))) (zip-colls rips ops))
+        nics (mapv (fn [[ip op id]] (run prog ip op nil)) (zip-colls rips ops (range)))
         router (go
                  (loop []
                    (let [[trg-addr src-port] (alts! ops)
@@ -95,6 +95,7 @@
         (loop []
           (mlocking ip
                     (>! ip -1))
-          (<! (timeout 1000)))))
+          (<! (timeout 250))
+          (recur))))
     (<!! nat)))
 
