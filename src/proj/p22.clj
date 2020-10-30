@@ -5,17 +5,17 @@
 (def N 10007)
 (def orig (fn [i] i))
 
-(defn dealNew [_]
+(defn dealNewRev [_]
   (fn [prev]
     (fn [i]
       (- N (prev i) 1))))
 
-(defn cut [n]
+(defn cutRev [n]
   (fn [prev]
     (fn [i]
       (mod (- (prev i) n) N))))
 
-(defn dealInc [n]
+(defn dealIncRev [n]
   (fn [prev]
     (fn [i]
       (mod (* (prev i) n) N))))
@@ -35,16 +35,34 @@
       (recur (assoc res (p (first left)) (first left))
              (rest left)))))
 
-(defn transformer [l]
+(defn transformerRev [l]
   (cond
-    (str/starts-with? l "deal into new stack") [dealNew nil]
-    (str/starts-with? l "cut ") [cut (read-string (subs l 4))]
-    (str/starts-with? l "deal with increment ") [dealInc (read-string (subs l 20))]
+    (str/starts-with? l "deal into new stack") [dealNewRev nil]
+    (str/starts-with? l "cut ") [cutRev (read-string (subs l 4))]
+    (str/starts-with? l "deal with increment ") [dealIncRev (read-string (subs l 20))]
     :default (throw (new IllegalStateException))))
 
 
 
-(def parsed (->> "p22.txt"
-                 slurp
-                 str/split-lines
-                 (mapv transformer)))
+(def parsedRev (->> "p22.txt"
+                    slurp
+                    str/split-lines
+                    (mapv transformerRev)))
+
+(defn p1 []
+  ((compile parsedRev) 2019))
+
+(defn dealNew [_]
+  (fn [prev]
+    (fn [i]
+      (prev (- N 1 i)))))
+
+(defn cut [n]
+  (fn [prev]
+    (fn [i]
+      (prev (- i n)))))
+
+(defn dealInc [n]
+  (fn [prev]
+    (fn [i]
+      )))

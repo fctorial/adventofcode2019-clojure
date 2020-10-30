@@ -68,16 +68,16 @@
        [0 1] [0 -1]])))
 
 (def nodes (set (filter identity
-                        (concat #_(for [x (range X)
-                                      y (range Y)
-                                      :let [coord [x y]]
-                                      :when (and (= (get-in grid_ coord) :Empty)
-                                                 (> (count (neighbours_ grid_ coord))
-                                                    2))]
-                                  coord)
-                                all-keys
-                                all-gates
-                                bot-locs))))
+                        (concat (for [x (range X)
+                                        y (range Y)
+                                        :let [coord [x y]]
+                                        :when (and (= (get-in grid_ coord) :Empty)
+                                                   (> (count (neighbours_ grid_ coord))
+                                                      2))]
+                                    coord)
+                          all-keys
+                          all-gates
+                          bot-locs))))
 
 (defn neighbours_2 [nodes loc]
   (if (nodes loc)
@@ -105,34 +105,60 @@
 
 (def meta-start {:bots         bot-locs
                  :closed-gates all-gates
-                 :keys-left    all-keys})
+                 :keys-left    all-keys
+                 :grid         grid})
 
-(defn meta-neighbours-1 [{bot :bot gs :closed-gates ks :keys-left}]
+(defn dissolve [grid node]
+  (let [ns (grid node)]
+    (reduce
+      (fn [res [n _]]
+        (reduce
+          (fn [res n2]
+            (update res n assoc n2 (min (+ (get-in grid [n node])
+                                           (get-in grid [node n2]))
+                                        (get-in grid [n n2] Integer/MAX_VALUE))))
+          (update res n dissoc node)
+          (keys (dissoc ns n))))
+      grid
+      ns)))
+
+(defn fuck [grid loc ks]
+  (if (ks loc)
+    (as-> grid $
+          (dissolve $ loc)
+          (dissolve $ (key-index loc)))
+    grid))
+
+(def c (atom 0))
+(defn meta-neighbours-1 [{bot :bot gs :closed-gates ks :keys-left grid :grid}]
   (for [new-loc (filter
                   #(not (get gs % false))
                   (keys (grid bot)))]
     {:bot          new-loc
      :closed-gates (disj gs (key-index new-loc))
-     :keys-left    (disj ks new-loc)}))
+     :keys-left    (disj ks new-loc)
+     :grid         (fuck grid new-loc ks)}))
 
-(def c 0)
-(defn meta-neighbours [{bots :bots gs :closed-gates ks :keys-left}]
-  (def c (inc c))
+(defn meta-neighbours [{bots :bots gs :closed-gates ks :keys-left grid :grid}]
+  (swap! c inc)
   (apply concat (for [[bot idx] (zip-colls bots (range))
                       :let [n-1 (meta-neighbours-1 {:bot          bot
                                                     :closed-gates gs
-                                                    :keys-left    ks})]]
+                                                    :keys-left    ks
+                                                    :grid         grid})]]
                   (for [n n-1]
                     {:bots         (assoc bots idx (n :bot))
                      :closed-gates (n :closed-gates)
-                     :keys-left    (n :keys-left)}))))
+                     :keys-left    (n :keys-left)
+                     :grid         (n :grid)}))))
 
 (defn meta-dist [curr neighbour]
-  (apply max (map (fn [[a b]] (get-in grid [a b] 0))
+  (apply max (map (fn [[a b]] (get-in (curr :grid) [a b] 0))
                   (zip-colls (curr :bots)
                              (neighbour :bots)))))
 
-(defn p1 []
+(defn p2 []
+  (reset! c 0)
   (let [toph (dijkstra meta-neighbours
                        meta-dist
                        meta-start)
@@ -156,5 +182,5 @@
                                (disj keys-left nxt-loc)
                                (rest locs)))))]
     {:dist dist
-     :path path
+     :path (map #(select-keys % [:bots ]) path)
      :keys key-order}))
