@@ -6,7 +6,7 @@
             [clojure.core.async :as async :refer [>! >!! <! <!! chan go go-loop close! timeout]]
             [proj.vis.main :refer [create-window synced-window]]))
 
-(def grid__ (->> (slurp "t.txt")
+(def grid__ (->> (slurp "p18.txt")
                  split-lines
                  (mapv #(mapv (fn [k] (get {\# :Wall \. :Empty} k k)) %))))
 (def X (count grid__))
@@ -140,7 +140,7 @@
      :grid         (fuck grid new-loc ks)}))
 
 (defn meta-neighbours [{bots :bots gs :closed-gates ks :keys-left grid :grid}]
-  (swap! c inc)
+  (reset! c (count ks))
   (apply concat (for [[bot idx] (zip-colls bots (range))
                       :let [n-1 (meta-neighbours-1 {:bot          bot
                                                     :closed-gates gs
@@ -159,9 +159,17 @@
 
 (defn p2 []
   (reset! c 0)
-  (let [toph (dijkstra meta-neighbours
-                       meta-dist
-                       meta-start)
+  (let [ui (new Thread #(loop []
+                          (println @c)
+                          (Thread/sleep 1000)
+                          (recur)))
+        _ (.start ui)
+        toph (try
+               (dijkstra meta-neighbours
+                        meta-dist
+                        meta-start)
+               (finally
+                 (.interrupt ui)))
         [last [dist _]] (->> toph
                              (filter #(empty? (:keys-left (first %))))
                              (apply min-key #(first (second %))))
