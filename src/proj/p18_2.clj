@@ -68,13 +68,7 @@
        [0 1] [0 -1]])))
 
 (def nodes (set (filter identity
-                        (concat (for [x (range X)
-                                        y (range Y)
-                                        :let [coord [x y]]
-                                        :when (and (= (get-in grid_ coord) :Empty)
-                                                   (> (count (neighbours_ grid_ coord))
-                                                      2))]
-                                    coord)
+                        (concat
                           all-keys
                           all-gates
                           bot-locs))))
@@ -129,7 +123,6 @@
           (dissolve $ (key-index loc)))
     grid))
 
-(def c (atom 0))
 (defn meta-neighbours-1 [{bot :bot gs :closed-gates ks :keys-left grid :grid}]
   (for [new-loc (filter
                   #(not (get gs % false))
@@ -139,56 +132,92 @@
      :keys-left    (disj ks new-loc)
      :grid         (fuck grid new-loc ks)}))
 
+(def c (atom 0))
 (defn meta-neighbours [{bots :bots gs :closed-gates ks :keys-left grid :grid}]
   (reset! c (count ks))
-  (apply concat (for [[bot idx] (zip-colls bots (range))
-                      :let [n-1 (meta-neighbours-1 {:bot          bot
-                                                    :closed-gates gs
-                                                    :keys-left    ks
-                                                    :grid         grid})]]
-                  (for [n n-1]
-                    {:bots         (assoc bots idx (n :bot))
-                     :closed-gates (n :closed-gates)
-                     :keys-left    (n :keys-left)
-                     :grid         (n :grid)}))))
+  (let [res (apply concat (for [[bot idx] (zip-colls bots (range))
+                                :let [n-1 (meta-neighbours-1 {:bot          bot
+                                                              :closed-gates gs
+                                                              :keys-left    ks
+                                                              :grid         grid})]]
+                            (for [n n-1]
+                              {:bots         (assoc bots idx (n :bot))
+                               :closed-gates (n :closed-gates)
+                               :keys-left    (n :keys-left)
+                               :grid         (n :grid)})))]
+    res))
 
 (defn meta-dist [curr neighbour]
   (apply max (map (fn [[a b]] (get-in (curr :grid) [a b] 0))
                   (zip-colls (curr :bots)
                              (neighbour :bots)))))
 
-(defn p2 []
-  (reset! c 0)
-  (let [ui (new Thread #(loop []
-                          (println @c)
-                          (Thread/sleep 1000)
-                          (recur)))
-        _ (.start ui)
-        toph (try
-               (dijkstra meta-neighbours
+(defn hev
+  [neighbour-fn dist-fn h start fubuki]
+  (let [kawaii (chan 1024)]
+    (go
+      (loop [visited {}
+             queue (priority-map-keyfn #(* 1 (first %)) start [0 0 nil])]
+        (when (not (empty? queue))
+          (let [[current [_ current-score previous]] (peek queue)
+                visited (assoc visited current [current-score previous])
+                valid (empty? (:keys-left current))]
+            (if valid
+              (>! kawaii current-score))
+            (if @fubuki
+              (recur visited
+                     (reduce (fn [queue node]
+                               (let [score (+ current-score (dist-fn current node))
+                                     fuck identity]
+                                 (if (and (not (contains? visited node))
+                                          (or (not (contains? queue node))
+                                              (< score (get-in queue [node 1]))))
+                                   (assoc queue node [(+ score (fuck (h node))) score current])
+                                   queue)))
+                             (pop queue)
+                             (neighbour-fn current))))))))
+    kawaii))
+
+
+(defn t [weight]
+  (let [fubuki (atom true)
+        kawaii (hev meta-neighbours
+                    meta-dist
+                    (fn [n]
+                      (* weight (count (n :keys-left))))
+                    meta-start
+                    fubuki)
+        m (min-in-chan kawaii)]
+    (go
+      (<! (timeout 10000))
+      (reset! fubuki false)
+      @m)))
+(defn h [n]
+  (let [v (count (n :keys-left))
+        t (float (/ v 26))]
+    (* 400 (* t 26))))
+(defn fuckf []
+  (let [fubuki (atom true)]
+    (try
+      (let [kawaii (hev meta-neighbours
                         meta-dist
-                        meta-start)
-               (finally
-                 (.interrupt ui)))
-        [last [dist _]] (->> toph
-                             (filter #(empty? (:keys-left (first %))))
-                             (apply min-key #(first (second %))))
-        path (loop [coll `(~last)]
-               (let [nxt (second (toph (first coll)))]
-                 (if nxt
-                   (recur (cons nxt coll))
-                   coll)))
-        key-order (loop [order []
-                         keys-left all-keys
-                         locs (map :bot path)]
-                    (if (empty? locs)
-                      order
-                      (let [nxt-loc (first locs)]
-                        (recur (if (keys-left nxt-loc)
-                                 (conj order nxt-loc)
-                                 order)
-                               (disj keys-left nxt-loc)
-                               (rest locs)))))]
-    {:dist dist
-     :path (map #(select-keys % [:bots ]) path)
-     :keys key-order}))
+                        h
+                        meta-start
+                        fubuki)
+            m (min-in-chan kawaii)]
+        (loop []
+          (Thread/sleep 1000)
+          (println @m @c)
+          (recur)))
+      (finally
+        (reset! fubuki false)))))
+(defn p2 []
+  (into {}
+        (apply concat
+               (for [ws (partition 2 (range 100 300 5))
+                     :let [res (mapv vec (zip-colls ws (->> ws
+                                                            (mapv t)
+                                                            (mapv <!!))))]]
+                 (do
+                   (println res)
+                   res)))))

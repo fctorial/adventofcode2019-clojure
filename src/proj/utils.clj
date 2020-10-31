@@ -191,7 +191,7 @@
   [neighbour-fn dist-fn h start goal]
   (loop [visited {}
          queue (priority-map-keyfn #(* 1 (first %)) start [0 0 nil])]
-    (when (not (empty? queue))
+    (if (not (empty? queue))
       (let [[current [_ current-score previous]] (peek queue)
             visited (assoc visited current [current-score previous])]
         (if (= current goal)
@@ -204,7 +204,8 @@
                                        (assoc queue node [(+ score (h node)) score current])
                                        queue)))
                                  (pop queue)
-                                 (neighbour-fn current))))))))
+                                 (neighbour-fn current)))))
+      visited)))
 
 (defn bsearch-lower [s e val-fn]
   (if (<= (- e s) 1)
@@ -236,3 +237,12 @@
   `(do
      (def ~sym ~o)
      ~o))
+
+(defn min-in-chan [c]
+  (let [a (atom Long/MAX_VALUE)]
+    (go
+      (loop []
+        (let [d (<! c)]
+          (swap! a min d)
+          (recur))))
+    a))
